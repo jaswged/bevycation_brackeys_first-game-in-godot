@@ -5,6 +5,8 @@ mod debugging;
 mod enemy;
 
 use bevy::prelude::*;
+use bevy::render::RenderPlugin;
+use bevy::render::settings::{Backends, RenderCreation, WgpuSettings};
 use bevy::transform::TransformSystem;
 use bevy::utils::HashSet;
 use bevy_ecs_ldtk::prelude::*;
@@ -23,11 +25,19 @@ fn main() {
     App::new()
         .register_type::<EntityInstance>()
         .register_type::<HashSet<Entity>>()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // prevents blurry sprites
+        // .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // prevents blurry sprites
+        .add_plugins(DefaultPlugins.set(RenderPlugin {
+            render_creation: RenderCreation::Automatic(WgpuSettings {
+                backends: Some(Backends::VULKAN),
+                ..default()
+            }),
+            ..default()
+        }).set(ImagePlugin::default_nearest()))
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(Shape2dPlugin::default())
         .add_plugins(LdtkPlugin)
         .add_plugins(SpritesheetAnimationPlugin)
+        // Resources
         .insert_resource(LevelSelection::index(0))
         .insert_resource(LdtkSettings {
             level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
@@ -36,17 +46,19 @@ fn main() {
             set_clear_color: SetClearColor::FromLevelBackground,
             ..Default::default()
         })
+        .insert_resource(Msaa::Off)
+        .insert_resource(GlobalVolume::new(0.2))
+
         .add_plugins(EditorPlugin::default())
         .add_plugins(DebuggingPlugin)
         .add_plugins(CharacterControllerPlugin)
         .add_plugins(WorldPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(EnemyPlugin)
+        // Systems
         .add_systems(Startup, setup_system)
         .add_systems(Update, zoom_scale_system)
         .add_systems(PostUpdate, camera_follow_player_system.after(PhysicsSet::Sync).before(TransformSystem::TransformPropagate))
-        .insert_resource(Msaa::Off)
-        .insert_resource(GlobalVolume::new(0.2))
         .run();
 }
 
